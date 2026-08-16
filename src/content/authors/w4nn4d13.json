@@ -1,0 +1,8 @@
+{
+  "name": "HAST CMS",
+  "role": "Git-based Markdown Publishing",
+  "bio": "HAST CMS is a minimalist, Git-based Markdown publishing system. Write in Markdown, commit to Git, and publish as static HTML.",
+  "social": {
+    "github": "https://github.com/th30d4y/HAST-CMS"
+  }
+}

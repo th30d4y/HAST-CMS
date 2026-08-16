@@ -1,0 +1,248 @@
+---
+import { SITE } from '@/config/site';
+import { getSiteSettings } from '@/utils/settings';
+import '@/styles/global.css';
+
+const settings = await getSiteSettings();
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonical?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  noindex?: boolean;
+  publishedDate?: Date;
+  updatedDate?: Date;
+  author?: string;
+  schema?: object;
+  keywords?: string;
+}
+
+const {
+  title,
+  description = settings.siteDescription,
+  canonical,
+  ogImage = SITE.defaultOGImage,
+  ogType = 'website',
+  noindex = false,
+  publishedDate,
+  updatedDate,
+  author = settings.author,
+  schema,
+  keywords,
+} = Astro.props;
+
+const pageTitle = title
+  ? `${title}${SITE.seo.titleSeparator}${settings.seo.titleSuffix}`
+  : settings.siteName;
+
+const canonicalURL = canonical
+  ? (canonical.startsWith('http') ? canonical : new URL(canonical, SITE.siteURL).toString())
+  : new URL(Astro.url.pathname, SITE.siteURL).toString();
+
+const ogImageURL = ogImage
+  ? (ogImage.startsWith('http') ? ogImage : new URL(ogImage, SITE.siteURL).toString())
+  : new URL(SITE.defaultOGImage, SITE.siteURL).toString();
+
+const currentPath = Astro.url.pathname;
+
+const metaKeywords = keywords || SITE.seo.keywords;
+
+// WebSite schema with SearchAction — always present
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: settings.siteName,
+  url: SITE.siteURL,
+  description: settings.siteDescription,
+  author: {
+    '@type': 'Person',
+    name: settings.author,
+    url: SITE.authorURL,
+  },
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: `${SITE.siteURL}/search/?q={search_term_string}`,
+    },
+    'query-input': 'required name=search_term_string',
+  },
+};
+
+// Person schema for author pages
+const personSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: settings.author,
+  url: SITE.authorURL,
+  sameAs: [
+    SITE.social.github,
+  ].filter(Boolean),
+};
+
+// Breadcrumb list schema
+const breadcrumbItems: Array<{ name: string; item: string }> = [
+  { name: 'Home', item: SITE.siteURL + '/' },
+];
+if (currentPath !== '/') {
+  const segments = currentPath.replace(/\/$/, '').split('/').filter(Boolean);
+  let cumulative = SITE.siteURL;
+  for (const seg of segments) {
+    cumulative += '/' + seg;
+    breadcrumbItems.push({ name: seg.replace(/-/g, ' '), item: cumulative + '/' });
+  }
+}
+const breadcrumbSchema = breadcrumbItems.length > 1 ? {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: breadcrumbItems.map((item, idx) => ({
+    '@type': 'ListItem',
+    position: idx + 1,
+    name: item.name,
+    item: item.item,
+  })),
+} : null;
+
+const combinedSchema = [
+  websiteSchema,
+  personSchema,
+  ...(breadcrumbSchema ? [breadcrumbSchema] : []),
+  ...(schema ? [schema] : []),
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- Core SEO -->
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="keywords" content={metaKeywords} />
+    <meta name="author" content={author} />
+    <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'} />
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- Locale -->
+    <meta property="og:locale" content={SITE.locale.replace('-', '_')} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:site_name" content={settings.siteName} />
+    <meta property="og:image" content={ogImageURL} />
+    <meta property="og:image:alt" content={pageTitle} />
+    {publishedDate && <meta property="article:published_time" content={publishedDate.toISOString()} />}
+    {updatedDate && <meta property="article:modified_time" content={updatedDate.toISOString()} />}
+    {author && ogType === 'article' && <meta property="article:author" content={`${SITE.siteURL}/author/${author.toLowerCase().replace(/\s+/g, '-')}/`} />}
+    {ogType === 'article' && <meta property="article:publisher" content={SITE.siteURL} />}
+
+    <!-- Twitter / X Card -->
+    <meta name="twitter:card" content={SITE.seo.twitterCard} />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageURL} />
+    <meta name="twitter:image:alt" content={pageTitle} />
+    {SITE.seo.twitterSite && <meta name="twitter:site" content={SITE.seo.twitterSite} />}
+    <meta name="twitter:creator" content={`@${settings.author}`} />
+
+    <!-- Dates for crawlers -->
+    {publishedDate && <meta name="article:published_time" content={publishedDate.toISOString()} />}
+    {updatedDate && <meta name="article:modified_time" content={updatedDate.toISOString()} />}
+
+    <!-- Feeds -->
+    <link rel="alternate" type="application/rss+xml" title={settings.rss.title} href={`${SITE.siteURL}/rss.xml`} />
+    <link rel="alternate" type="application/feed+json" title={settings.rss.title} href={`${SITE.siteURL}/feed.json`} />
+
+    <!-- Favicon -->
+    <link rel="icon" href={SITE.favicon} />
+
+    <!-- Schema.org JSON-LD — all schemas combined -->
+    <script type="application/ld+json" set:html={JSON.stringify(combinedSchema)} />
+
+    <!-- Analytics (optional, disabled by default) -->
+    {SITE.analytics.enabled && SITE.analytics.provider === 'plausible' && (
+      <script defer data-domain={SITE.analytics.dataId} src={SITE.analytics.scriptSrc} />
+    )}
+    {SITE.analytics.enabled && SITE.analytics.provider === 'umami' && (
+      <script defer data-website-id={SITE.analytics.dataId} src={SITE.analytics.scriptSrc} />
+    )}
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
+
+    <header class="site-header" role="banner">
+      <div class="site-header__inner">
+        <a href="/" class="site-logo">{settings.siteName}</a>
+
+        <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+          {SITE.navigation.map((item) => (
+            <a
+              href={item.href}
+              aria-current={currentPath === item.href || currentPath.startsWith(item.href === '/' ? '/_never_' : item.href) ? 'page' : undefined}
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
+
+        <button
+          class="nav-toggle"
+          id="nav-toggle"
+          aria-controls="site-nav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          MENU
+        </button>
+      </div>
+    </header>
+
+    <main id="main-content" class="site-main">
+      <slot />
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+      <div class="site-footer__inner">
+        <div class="footer-brand">
+          <a href="/" class="footer-brand__name">{settings.siteName}</a>
+          <p class="footer-brand__desc">{settings.author} — {settings.authorRole}</p>
+        </div>
+
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="/latest/">Latest</a>
+          <a href="/archive/">Archive</a>
+          <a href="/categories/">Categories</a>
+          <a href="/tags/">Tags</a>
+          <a href="/about/">About</a>
+          <a href="/rss.xml">RSS</a>
+          {SITE.social.github && <a href={SITE.social.github} rel="noopener noreferrer" target="_blank">GitHub</a>}
+        </nav>
+
+        <div class="footer-copy">
+          &copy; {new Date().getFullYear()} {settings.author}. Published with HAST CMS.
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // Mobile nav toggle
+      const toggle = document.getElementById('nav-toggle');
+      const nav = document.getElementById('site-nav');
+      if (toggle && nav) {
+        toggle.addEventListener('click', () => {
+          const isOpen = nav.classList.toggle('is-open');
+          toggle.setAttribute('aria-expanded', String(isOpen));
+          toggle.textContent = isOpen ? 'CLOSE' : 'MENU';
+        });
+      }
+    </script>
+  </body>
+</html>
