@@ -907,7 +907,3 @@ The search index is built at compile time. Run `npm run build` to regenerate it.
 ## Repository
 
 [https://github.com/th30d4y/HAST-CMS](https://github.com/th30d4y/HAST-CMS)
-
----
-
-*Built with [Astro](https://astro.build) · Deployed via GitHub Actions*
