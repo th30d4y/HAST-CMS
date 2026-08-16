@@ -162,7 +162,7 @@ const combinedSchema = [
     <link rel="alternate" type="application/feed+json" title={settings.rss.title} href={`${SITE.siteURL}/feed.json`} />
 
     <!-- Favicon -->
-    <link rel="icon" href={SITE.favicon} />
+    <link rel="icon" type="image/png" href={SITE.favicon} />
 
     <!-- Schema.org JSON-LD — all schemas combined -->
     <script type="application/ld+json" set:html={JSON.stringify(combinedSchema)} />

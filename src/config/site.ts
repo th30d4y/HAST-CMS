@@ -14,7 +14,7 @@ export const SITE = {
   excerptLength: 200,
 
   defaultOGImage: '/og-default.png',
-  favicon: '/favicon.ico',
+  favicon: '/favicon.png',
 
   navigation: [
     { label: 'HOME', href: '/' },
